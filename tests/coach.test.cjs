@@ -61,3 +61,11 @@ test('calendar review interval survives a daylight-saving transition',()=>{
  const {execFileSync}=require('node:child_process');const script="const C=require('./coach.js');const at='2026-03-07T12:00:00-05:00';const next=C.nextReview(at,false,0);console.log(JSON.stringify({hours:(Date.parse(next)-Date.parse(at))/3600000,day:new Date(next).getDate(),hour:new Date(next).getHours()}));";
  const result=JSON.parse(execFileSync(process.execPath,['-e',script],{cwd:require('node:path').join(__dirname,'..'),env:{...process.env,TZ:'America/New_York'},encoding:'utf8'}));assert.deepEqual(result,{hours:23,day:8,hour:12});
 });
+test('sustained success defers old repeated mistakes until due and unseen fills first',()=>{
+ for(const [streak,elapsed] of [[2,6],[3,10],[4,20]]){
+  const history=[...Array.from({length:5},()=>event(1,false,ago(40))),...Array.from({length:streak},()=>event(1,true,ago(elapsed)))];
+  const r=recommend(history);assert.equal(r.stats[1].correctStreak,streak);assert.equal(r.items.some(x=>x.id===1),false);
+  const item=C.rankQuestion({id:1},r.stats[1],now,'test');assert.equal(item.due,false);assert.equal(item.reviewCandidate,false);assert.ok(item.reason.includes('復習日前'));
+  const after=C.recommend(bank,load({history}),now+(C.intervalDays(true,streak)-elapsed)*86400000);assert.equal(after.items.some(x=>x.id===1&&x.due),true);
+ }
+});
