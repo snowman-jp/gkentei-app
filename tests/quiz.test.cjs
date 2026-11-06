@@ -15,7 +15,7 @@ class Element{
 function app(seedData){
  const elements=new Map();const saved=new Map();if(seedData)saved.set('gkentei-trainer-v3-exam-original',JSON.stringify(seedData));
  let seed=321;const math=Object.create(Math);math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- const context=vm.createContext({document:{body:new Element(),getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement:t=>new Element(t),createTextNode:t=>({textContent:t})},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Math:math,Date,Set,JSON,confirm:()=>true});
+ const context=vm.createContext({ReviewCoach:require('../coach.js'),document:{body:new Element(),getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement:t=>new Element(t),createTextNode:t=>({textContent:t})},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Math:math,Date,Set,JSON,confirm:()=>true});
  vm.runInContext(script,context);return {run:code=>vm.runInContext(code,context),node:id=>elements.get(id),saved:()=>JSON.parse(saved.get('gkentei-trainer-v3-exam-original'))};
 }
 test('100 stable IDs, four unique choices and one answer; 100 complete six-part lessons',()=>{
