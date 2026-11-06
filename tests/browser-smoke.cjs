@@ -5,7 +5,7 @@ const http=require('node:http');
 const path=require('node:path');
 const {chromium}=require('playwright');
 (async()=>{
- const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(fs.readFileSync(path.join(__dirname,'../index.html')))});
+ const server=http.createServer((req,res)=>{const coach=req.url.split('?')[0]==='/coach.js';res.setHeader('Content-Type',coach?'text/javascript; charset=utf-8':'text/html; charset=utf-8');res.end(fs.readFileSync(path.join(__dirname,coach?'../coach.js':'../index.html')))});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  let browser;
  try{
