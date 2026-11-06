@@ -27,4 +27,4 @@ node tests/browser-smoke.cjs
 
 後者はPlaywrightとChromiumが必要です。クラウド環境には同梱済みで、Chromiumの場所は `CHROMIUM_PATH` で指定できます。
 
-[実装・テスト結果・未確認事項](docs/all-lessons-quality.md)を参照してください。法律一次資料の現行本文確認が未完了のため、今回の変更はmainへの統合前の確認段階です。
+[実装・テスト結果・未確認事項](docs/all-lessons-quality.md)を参照してください。法律6問は2026年11月6日時点の施行法令本文と照合しました。[法令照合記録](docs/legal-review-2026-11-06.md)を参照してください。mainへの統合はまだ行っていません。

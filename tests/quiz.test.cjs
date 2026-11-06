@@ -68,7 +68,10 @@ test('lesson error reasons follow display labels; all six sections render',()=>{
  a.run("start('review',[21]);choose(displayedChoices.findIndex(c=>c.originalIndex===queue[i].a))");assert.equal(a.node('feedback').children[2].children.filter(x=>x.tagName==='details').length,5);
 });
 test('invalid display indices do not save an answer',()=>{const a=app();a.run("start('review',[21]);choose(-1);choose(4);choose(NaN)");assert.equal(a.run('data.history.length'),0)});
-test('legal metadata distinguishes editing date from unverified primary law',()=>{
+test('legal metadata matches verified effective law revisions and source evidence',()=>{
+ const evidence=JSON.parse(fs.readFileSync(require('node:path').join(__dirname,'../docs/legal-verification-2026-11-06.json'),'utf8'));
+ assert.equal(Object.keys(evidence.laws).length,4);for(const law of Object.values(evidence.laws)){assert.equal(law.revisionStatus,'CurrentEnforced');assert.ok(law.effectiveFrom<=evidence.asOf);assert.equal(law.responseSha256.length,64);assert.ok(Object.keys(law.excerpts).length>0)}
  const a=app();assert.equal(a.run('QUESTIONS.filter(q=>q.legal).length'),6);
- assert.equal(a.run("QUESTIONS.filter(q=>q.legal).every(q=>q.legal.conditions&&q.legal.exceptions&&q.legal.basis&&q.legal.reviewedOn==='2026-11-06'&&q.legal.verification.includes('未確認')&&q.legal.url.startsWith('https://laws.e-gov.go.jp/law/'))"),true);
+ const revisions=JSON.parse(a.run('JSON.stringify(QUESTIONS.filter(q=>q.legal).map(q=>q.legal.revisionId))'));assert.equal(revisions.every(id=>Object.values(evidence.laws).some(law=>law.revisionId===id)),true);
+ assert.equal(a.run("QUESTIONS.filter(q=>q.legal).every(q=>q.legal.conditions&&q.legal.exceptions&&q.legal.basis&&q.legal.reviewedOn==='2026-11-06'&&q.legal.asOf==='2026-11-06'&&q.legal.revisionId&&q.legal.verification.includes('関係条文を確認')&&q.legal.url.startsWith('https://laws.e-gov.go.jp/law/'))"),true);
 });

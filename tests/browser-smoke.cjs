@@ -30,7 +30,7 @@ const {chromium}=require('playwright');
     assert.equal(await page.locator('.lesson-section[open]').count(),1);assert.equal(await page.locator('.lesson-section li').count(),3);
     for(const section of await page.locator('.lesson-section').all()){if(!await section.evaluate(el=>el.open))await section.locator('summary').click()}
     assert.equal(await page.locator('.lesson-section[open]').count(),5);
-    if(await page.evaluate(()=>!!queue[i].legal)){assert.equal(await page.locator('.legal-note').isVisible(),true);assert.match(await page.textContent('.legal-note'),/未確認/)}
+    if(await page.evaluate(()=>!!queue[i].legal)){assert.equal(await page.locator('.legal-note').isVisible(),true);assert.match(await page.textContent('.legal-note'),/照合済み/)}
     for(const width of [320,390,1280]){await page.setViewportSize({width,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`overflow at Q${id}, ${width}px`)}
     await page.setViewportSize({width:390,height:844});
     assert.equal(await page.locator('.lesson-intuition').count(),1);
