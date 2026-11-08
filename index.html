@@ -267,12 +267,12 @@ const QUESTIONS=[
    a:answerIndex,
    e:explanation,
    lesson:{
-    intuition:'まず押さえるのは「'+correct+'」という判断です。',
+    intuition:'この設問の判断の鍵は、「'+correct+'」です。',
     conclusion:explanation,
-    basics:explanation+'\n関連する概念と比較し、なぜこの選択肢が問題文の条件に合うかを確認してください。',
+    basics:old.lesson.basics+'\nこの設問では、'+explanation,
     example:originalExample,
     wrong:options.map(x=>x.reason),
-    point:'正解は「'+correct+'」。紛らわしい選択肢は、別の概念や前提条件を示しています。問題文の目的・条件を一つずつ確かめましょう。'
+    point:'混同しやすいのは「'+all[1].answer+'」です。'+all[1].reason+'。問題文の条件と各手法の役割を比較しましょう。'
    }
   };
  });
