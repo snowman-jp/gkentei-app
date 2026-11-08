@@ -85,6 +85,10 @@ body.quiz-active main{padding-top:28px}
 <script src="questions-extra-2.js"></script>
 <script src="questions-extra-3.js"></script>
 <script src="questions-extra-4.js"></script>
+<script src="questions-exam-1.js"></script>
+<script src="questions-exam-2.js"></script>
+<script src="questions-exam-3.js"></script>
+<script src="questions-exam-4.js"></script>
 <script>
 const QUESTIONS=[
 {"id":1,"cat":"AI基礎・歴史","q":"チューリングテストについて最も適切な説明はどれか。","o":["機械が意識を有することを科学的に証明する実験","対話による人間と機械の識別可能性を判定する考え方","機械の論理推論速度を定量評価する標準ベンチマーク","ニューラルネットワークの汎化誤差を推定する手法"],"a":1,"e":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","lesson":{"intuition":"人と話して区別できるかを通じて、機械の知的な振る舞いを考えるテストです。","conclusion":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","basics":"チューリングテスト（Turing test）は対話に基づく判定の考え方です。知的に見える振る舞いと、内面に意識があることは別問題です。","example":"文字だけで相手と会話し、人か機械かを判定する場面を想像してください。自然な返答でも、意識がある証拠にはなりません。","wrong":["意識の存在を科学的に証明する設計ではありません。",null,"論理演算の速さを測る性能試験ではありません。","未知のデータへの誤差である汎化誤差を測る手法ではありません。"],"point":"振る舞いの判定と、意識や知能全体の証明を区別します。中国語の部屋や強いAI・弱いAIとの比較も重要です。"},"syllabus":{"version":"1.4","domain":"技術","item":2}},
@@ -231,6 +235,47 @@ const QUESTIONS=[
  };
  raw.forEach((r,i)=>QUESTIONS.push(makeQuestion(r,i)));
  if(QUESTIONS.length!==300||new Set(QUESTIONS.map(q=>q.id)).size!==300)throw new Error('問題数またはIDの不整合');
+}
+// Curated application, comparison, and calculation questions replace the basic additional bank.
+// Keep IDs 101-300 unchanged to retain existing statistics and answer-history references.
+{
+ const upgrades=window.GK_EXAM_UPGRADES||[];
+ if(upgrades.length!==200)throw new Error('問題の品質改訂データが200件ではありません。');
+ upgrades.forEach((row,index)=>{
+  if(!Array.isArray(row)||row.length!==6)throw new Error('問題の記録形式に誤りがあります: '+(101+index));
+  const id=101+index,old=QUESTIONS[id-1];
+  if(!old||old.id!==id)throw new Error('問題のIDを維持できません: '+id);
+  const [question,correct,distractorA,distractorB,distractorC,explanation]=row;
+  const all=[
+   {answer:correct,reason:null},
+   ...[distractorA,distractorB,distractorC].map(value=>{
+    const split=value.indexOf('^');
+    if(split<1)throw new Error('誤答選択肢に解説がありません: '+id);
+    return {answer:value.slice(0,split),reason:value.slice(split+1)};
+   })
+  ];
+  if(new Set(all.map(x=>x.answer)).size!==4)throw new Error('選択肢の重複: '+id);
+  const rotation=(id*7+1)%4;
+  const options=[...all.slice(rotation),...all.slice(0,rotation)];
+  const answerIndex=options.findIndex(x=>x.reason===null);
+  const originalExample=old.lesson.example;
+  const lead=old.q.replace(/^「|」について最も適切な説明はどれか。$/g,'');
+  QUESTIONS[id-1]={
+   ...old,
+   q:question,
+   o:options.map(x=>x.answer),
+   a:answerIndex,
+   e:explanation,
+   lesson:{
+    intuition:old.lesson.intuition,
+    conclusion:explanation,
+    basics:old.lesson.basics+'\nこの設問では、'+explanation,
+    example:originalExample,
+    wrong:options.map(x=>x.reason),
+    point:'混同しやすいのは「'+all[1].answer+'」です。'+all[1].reason+'。問題文の条件と各手法の役割を比較しましょう。'
+   }
+  };
+ });
 }
 const KEY='gkentei-trainer-v3-exam-original';const QUESTION_IDS=QUESTIONS.map(q=>q.id);
 let originalRaw=null,storageReadFailed=false;try{originalRaw=localStorage.getItem(KEY)}catch(_){storageReadFailed=true}
