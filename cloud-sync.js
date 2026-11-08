@@ -1,14 +1,19 @@
-/* G検定正式版: 既存学習機能を維持した本人専用・任意の手動同期。未同意なら通信しない。 */
+/* G検定正式版: 本人が明示的に許可した場合だけ自動同期する。未同意なら通信しない。 */
 (()=>{'use strict';
 const API_URL='https://kuduxlkmuvongfdqyjoc.supabase.co';
 const PUBLIC_KEY='sb_publishable_a2M9GVPbhf7xaTOnI3hH8Q_kXOKzIzy';
 const OPT_IN='gkentei-formal-cloud-opt-in-v1';
 const SESSION='gkentei-formal-cloud-session-v1';
+const AUTO='gkentei-formal-cloud-auto-opt-in-v1';
+const AUTO_DEBOUNCE_MS=2000, AUTO_MIN_INTERVAL_MS=30000;
+let syncRunning=false,autoTimer=null,lastAutoAttempt=0,rerunAfterSync=false;
 const $c=id=>document.getElementById(id);
 let session=null;
 let recoveryMode=false;
 const status=(t,error=false)=>{const el=$c('cloudStatus');if(el){el.textContent=t;el.style.color=error?'#b42318':'#43556d'}};
 const consent=()=>localStorage.getItem(OPT_IN)==='yes';
+const autoEnabled=()=>consent()&&localStorage.getItem(AUTO)==='yes';
+const canAuto=()=>autoEnabled()&&!!session?.access_token&&!recoveryMode&&!storageReadFailed&&!loaded.readOnly;
 const headers=(token)=>({'apikey':PUBLIC_KEY,'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})});
 async function call(path,{method='GET',body,token,extra={}}={}){
  const response=await fetch(API_URL+path,{method,headers:{...headers(token),...extra},...(body!==undefined?{body:JSON.stringify(body)}:{})});
@@ -19,6 +24,8 @@ function saveSession(s){session=s; if(s)sessionStorage.setItem(SESSION,JSON.stri
 function render(){
  const active=consent(),signed=!!session?.access_token;
  $c('cloudConsent').checked=active;
+ $c('cloudAuto').checked=autoEnabled();
+ $c('cloudAuto').disabled=!active||recoveryMode;
  $c('cloudLogin').hidden=signed||recoveryMode;
  $c('cloudRecovery').hidden=!recoveryMode;
  $c('cloudLoggedIn').hidden=!signed||recoveryMode;
@@ -56,8 +63,11 @@ async function getAllEvents(t){
  }
  return output;
 }
-async function manualSync(){
+async function syncHistory(automatic=false){
  if(!consent())return status('先にクラウド同期に同意してください。',true);
+ if(automatic&&!canAuto())return;
+ if(syncRunning){if(automatic)rerunAfterSync=true;return;}
+ syncRunning=true;
  const btn=$c('cloudSyncButton');btn.disabled=true;
  let phase='開始時の確認';
  try{
@@ -67,6 +77,7 @@ async function manualSync(){
   const t=await token();
   phase='本人の同期許可の確認';status('同期処理：'+phase);await approved(t);
   const local=data.history.map(r=>({...r}));
+  const startingHistory=JSON.stringify(data.history);
   phase='クラウド履歴の読み取り';status('同期処理：'+phase);
   const remote=await getAllEvents(t);
   const known=new Set(remote.map(x=>x.event_id));
@@ -80,7 +91,7 @@ async function manualSync(){
    const eid=await eventUUID(r);
    if(!known.has(eid))outgoing.push({event_id:eid,user_id:user.id,question_id:String(r.id),is_correct:r.ok,answered_at:r.at});
   }
-  if(!window.confirm('端末内の履歴 '+local.length+'件のうち、未登録の約'+outgoing.length+'件をクラウドへ送信します。既存の端末履歴は残し、他の端末で保存済みの記録も取り込みます。実行しますか？')){status('同期をキャンセルしました。');return}
+  if(!automatic&&!window.confirm('端末内の履歴 '+local.length+'件のうち、未登録の約'+outgoing.length+'件をクラウドへ送信します。既存の端末履歴は残し、他の端末で保存済みの記録も取り込みます。実行しますか？')){status('同期をキャンセルしました。');return}
   // iOS Safariでダウンロード直後のPOSTが中断される可能性があるため、
   // 同期処理中の自動ダウンロードは禁止。ユーザーは事前の手動JSONバックアップを保持する。
   phase='解答履歴の送信準備';status('同期処理：'+phase);
@@ -110,15 +121,35 @@ async function manualSync(){
   const answered=new Set(merged.map(r=>r.id));
   const wrong=new Set(data.wrong.filter(id=>!answered.has(id)));
   for(const r of merged){if(r.ok)wrong.delete(r.id);else wrong.add(r.id)}
-  const next={...data,history:merged,wrong:[...wrong]};
-  phase='端末内履歴への反映';status('同期処理：'+phase);
-  const previous=data;data=next;
-  if(!persist()){data=previous;throw new Error('履歴保護のため端末への保存を中止しました。元データは保持されています。');}
-  if(typeof dashboard==='function')dashboard();
-  status('同期完了。クラウド '+latest.length+'件、端末内 '+merged.length+'件。手動バックアップも保管してください。');
- }catch(e){status('同期できませんでした（'+phase+'）：'+e.message+'。端末内の履歴は保持されています。バックアップを削除しないでください。',true)}
- finally{render()}
+  // 回答中に履歴が増えた場合、古いスナップショットで上書きしない。
+  if(JSON.stringify(data.history)!==startingHistory){
+   rerunAfterSync=automatic;
+   throw new Error('同期中に新しい回答が記録されました。履歴は保持し、再同期します。');
+  }
+  // 既存履歴と完全に同じ場合は端末の保存領域を更新しない。
+  const changed=JSON.stringify(local)!==JSON.stringify(merged)||JSON.stringify([...wrong])!==JSON.stringify(data.wrong);
+  if(changed){
+   const next={...data,history:merged,wrong:[...wrong]};
+   phase='端末内履歴への反映';status('同期処理：'+phase);
+   const previous=data;data=next;
+   if(!persist()){data=previous;throw new Error('履歴保護のため端末への保存を中止しました。元データは保持されています。');}
+   if(typeof dashboard==='function'&&!document.body.classList.contains('quiz-active'))dashboard();
+  }
+  status((automatic?'自動同期完了。':'同期完了。')+'クラウド '+latest.length+'件、端末内 '+merged.length+'件。');
+ }catch(e){status((automatic?'自動同期':'同期')+'できませんでした（'+phase+'）：'+e.message+'。端末内の履歴は保持されています。バックアップを削除しないでください。',true)}
+ finally{
+  syncRunning=false;render();
+  if(rerunAfterSync){rerunAfterSync=false;scheduleAuto('回答追加',AUTO_MIN_INTERVAL_MS)}
+ }
 }
+function manualSync(){return syncHistory(false)}
+function scheduleAuto(reason,delay=AUTO_DEBOUNCE_MS){
+ if(!canAuto()||document.visibilityState!=='visible')return;
+ if(autoTimer!==null)clearTimeout(autoTimer);
+ const pause=Math.max(delay,AUTO_MIN_INTERVAL_MS-(Date.now()-lastAutoAttempt),0);
+ autoTimer=setTimeout(()=>{autoTimer=null;if(!canAuto()||document.visibilityState!=='visible')return;lastAutoAttempt=Date.now();syncHistory(true)},pause);
+}
+function stopAuto(){if(autoTimer!==null)clearTimeout(autoTimer);autoTimer=null}
 function init(){
  try{session=JSON.parse(sessionStorage.getItem(SESSION)||'null')}catch{session=null}
  // メールリンクから戻ってきた時のトークン。許可前にクラウド履歴を自動取得しない。
@@ -148,8 +179,15 @@ function init(){
  $c('cloudConsent').addEventListener('change',e=>{
   if(e.target.checked){
    if(!confirm('問題ID・正誤・解答日時を、本人が「同期する」を押した場合だけSupabaseへ保存します。通常利用では送信しません。同意しますか？')){e.target.checked=false;return}
-   localStorage.setItem(OPT_IN,'yes');status('同期が有効です。ただし「手動で同期する」を押すまで送信されません。');
-  }else{localStorage.removeItem(OPT_IN);status('クラウド同期をオフにしました。既に送信したデータは自動削除されません。')}
+   localStorage.setItem(OPT_IN,'yes');status('クラウド同期の利用を許可しました。自動同期は別途オンにした場合のみ動きます。');
+  }else{localStorage.removeItem(OPT_IN);localStorage.removeItem(AUTO);stopAuto();status('クラウド同期をオフにしました。送信済みのデータは自動削除されません。')}
+  render();
+ });
+ $c('cloudAuto').addEventListener('change',e=>{
+  if(e.target.checked){
+   if(!consent()||!window.confirm('ログイン中は、回答後やアプリを再び開いたときに、問題ID・正誤・日時を本人専用クラウドへ自動送信・取得します。実行しますか？')){e.target.checked=false;return}
+   localStorage.setItem(AUTO,'yes');status('自動同期をオンにしました。画面を開いているときに同期します。');scheduleAuto('設定変更',1500);
+  }else{localStorage.removeItem(AUTO);stopAuto();status('自動同期をオフにしました。既存のクラウドデータは残ります。')}
   render();
  });
  $c('cloudRequestReset').addEventListener('click',async()=>{
@@ -173,14 +211,20 @@ function init(){
    if(!result?.access_token||!result?.refresh_token)throw new Error('ログイン情報を取得できませんでした。');
    saveSession({...result,expires_at:Math.floor(Date.now()/1000)+(result.expires_in||3600)});
    $c('cloudPassword').value='';
-   status('ログインに成功しました。同期はオフのままです。');
+   status('ログインに成功しました。');scheduleAuto('ログイン',1500);
   }catch(e){status('ログインできませんでした。メールアドレスまたはパスワードを確認してください。',true);}
   finally{button.disabled=false;}
  });
- $c('cloudSignOut').addEventListener('click',async()=>{const t=session?.access_token;saveSession(null);if(t){try{await call('/auth/v1/logout',{method:'POST',token:t})}catch(_){}}status('ログアウトしました。端末の学習履歴は残っています。')});
+ $c('cloudSignOut').addEventListener('click',async()=>{stopAuto();const t=session?.access_token;saveSession(null);if(t){try{await call('/auth/v1/logout',{method:'POST',token:t})}catch(_){}}status('ログアウトしました。端末の学習履歴は残っています。')});
  $c('cloudBackup').addEventListener('click',()=>{makeBackup();status('学習履歴のバックアップを実行しました。')});
  $c('cloudSyncButton').addEventListener('click',manualSync);
- render();
+ window.addEventListener('gkentei:history-saved',()=>scheduleAuto('回答保存'));
+ window.addEventListener('online',()=>scheduleAuto('通信復帰',1000));
+ window.addEventListener('pageshow',()=>scheduleAuto('ページ表示',1000));
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleAuto('アプリ復帰',1000);else stopAuto()});
+ // 画面を開いたまま他端末から増えた回答も取得する（バックグラウンド同期ではない）。
+ setInterval(()=>scheduleAuto('他端末の確認',1000),120000);
+ render();scheduleAuto('起動',1500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
