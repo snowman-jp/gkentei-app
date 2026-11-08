@@ -61,6 +61,38 @@ async function eventUUID(row,index){
  return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
 }
 function makeBackup(){exportHistory()}
+async function legacySetUUID(userId,slot){
+ const input='gkentei-legacy-set|'+userId+'|'+slot;
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input)));
+ const b=digest.slice(0,16);b[6]=(b[6]&15)|128;b[8]=(b[8]&63)|128;
+ const hex=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+ return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+}
+const validUUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function getAllSets(t){
+ let result=[],offset=0;
+ while(true){
+  const page=await call('/rest/v1/set_completion_events?select=event_id,completed_at,legacy_import&order=created_at.asc&limit=1000&offset='+offset,{token:t});
+  if(!Array.isArray(page))throw new Error('完了セット履歴の読み取りに失敗しました。');
+  result.push(...page);
+  if(page.length<1000)break;
+  offset+=1000;
+  if(offset>100000)throw new Error('完了セットが多すぎるため中断しました。');
+ }
+ return result;
+}
+async function uploadSets(t,rows){
+ for(let i=0;i<rows.length;i+=100){
+  const response=await fetch('/api/set-sync',{
+   method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},
+   body:JSON.stringify(rows.slice(i,i+100)),cache:'no-store'
+  });
+  if(!response.ok){let details;try{details=await response.json()}catch{}
+   throw new Error((details?.error||'完了セットを送信できません')+' (HTTP '+response.status+')');
+  }
+ }
+}
+
 async function getAllEvents(t){
  let output=[];let offset=0;
  while(true){
@@ -86,6 +118,8 @@ async function syncHistory(automatic=false){
   phase='本人の同期許可の確認';status('同期処理：'+phase);await approved(t);
   const local=data.history.map(r=>({...r}));
   const startingHistory=JSON.stringify(data.history);
+  const startingSets=Number(data.sets)||0;
+  const startingSetEvents=JSON.stringify(data.setCompletionEvents||[]);
   phase='クラウド履歴の読み取り';status('同期処理：'+phase);
   const remote=await getAllEvents(t);
   const known=new Set(remote.map(x=>x.event_id));
@@ -112,6 +146,37 @@ async function syncHistory(automatic=false){
   }
   phase='保存結果の読み取り';status('同期処理：'+phase);
   const latest=await getAllEvents(t);
+  phase='完了セットの統合';status('同期処理：'+phase);
+  const remoteSets=await getAllSets(t);
+  const setIds=new Set(remoteSets.map(x=>x.event_id));
+  const localSetEvents=Array.isArray(data.setCompletionEvents)?data.setCompletionEvents.filter(e=>e&&validUUID.test(e.event_id)&&typeof e.completed_at==='string'&&Number.isFinite(Date.parse(e.completed_at))):[];
+  const newSetEvents=[];
+  for(const e of localSetEvents){
+   if(setIds.has(e.event_id))continue;
+   setIds.add(e.event_id);
+   newSetEvents.push({event_id:e.event_id,user_id:user.id,completed_at:e.completed_at,legacy_import:false});
+  }
+  // 以前のアプリで完了済みだったセット数（イベントIDが存在しない分）も安全に復元する。
+  // 既存クラウドのセット数を超える不足分に限り、ユーザー固有の固定IDで追加する。
+  const localLegacyCount=Math.max(0,startingSets-localSetEvents.length);
+  const missingLegacy=Math.max(0,localLegacyCount-remoteSets.length);
+  const remoteLegacyCount=remoteSets.filter(e=>e.legacy_import).length;
+  for(let slot=remoteLegacyCount+1;slot<=remoteLegacyCount+missingLegacy;slot++){
+   const id=await legacySetUUID(user.id,slot);
+   if(!setIds.has(id)){
+    setIds.add(id);
+    newSetEvents.push({event_id:id,user_id:user.id,completed_at:null,legacy_import:true});
+   }
+  }
+  if(newSetEvents.length)await uploadSets(t,newSetEvents);
+  const latestSets=await getAllSets(t);
+  const knownCompleted=new Map();
+  for(const entry of localSetEvents)knownCompleted.set(entry.event_id,entry);
+  for(const entry of latestSets){
+   if(!entry.legacy_import&&entry.completed_at)knownCompleted.set(entry.event_id,{event_id:entry.event_id,completed_at:entry.completed_at});
+  }
+  const mergedSetEvents=[...knownCompleted.values()].sort((a,b)=>Date.parse(a.completed_at)-Date.parse(b.completed_at));
+  const completedSets=Math.max(startingSets,latestSets.length);
   const existing=new Set();
   const semanticSeen=new Set();
   const merged=[];
@@ -133,20 +198,20 @@ async function syncHistory(automatic=false){
   const wrong=new Set(data.wrong.filter(id=>!answered.has(id)));
   for(const r of merged){if(r.ok)wrong.delete(r.id);else wrong.add(r.id)}
   // 回答中に履歴が増えた場合、古いスナップショットで上書きしない。
-  if(JSON.stringify(data.history)!==startingHistory){
+  if(JSON.stringify(data.history)!==startingHistory||Number(data.sets)!==startingSets||JSON.stringify(data.setCompletionEvents||[])!==startingSetEvents){
    rerunAfterSync=automatic;
    throw new Error('同期中に新しい回答が記録されました。履歴は保持し、再同期します。');
   }
   // 既存履歴と完全に同じ場合は端末の保存領域を更新しない。
-  const changed=JSON.stringify(local)!==JSON.stringify(merged)||JSON.stringify([...wrong])!==JSON.stringify(data.wrong);
+  const changed=JSON.stringify(local)!==JSON.stringify(merged)||JSON.stringify([...wrong])!==JSON.stringify(data.wrong)||completedSets!==data.sets||JSON.stringify(mergedSetEvents)!==JSON.stringify(data.setCompletionEvents||[]);
   if(changed){
-   const next={...data,history:merged,wrong:[...wrong]};
+   const next={...data,history:merged,wrong:[...wrong],sets:completedSets,setCompletionEvents:mergedSetEvents};
    phase='端末内履歴への反映';status('同期処理：'+phase);
    const previous=data;data=next;
    if(!persist()){data=previous;throw new Error('履歴保護のため端末への保存を中止しました。元データは保持されています。');}
    if(typeof dashboard==='function'&&!document.body.classList.contains('quiz-active'))dashboard();
   }
-  status((automatic?'自動同期完了。':'同期完了。')+'クラウド '+latest.length+'件、端末内 '+merged.length+'件。');
+  status((automatic?'自動同期完了。':'同期完了。')+'解答 '+latest.length+'件・完了セット '+completedSets+'件を共有しました。');
  }catch(e){status((automatic?'自動同期':'同期')+'できませんでした（'+phase+'）：'+e.message+'。端末内の履歴は保持されています。バックアップを削除しないでください。',true)}
  finally{
   syncRunning=false;render();
