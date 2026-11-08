@@ -45,8 +45,16 @@ async function approved(t){
  const rows=await call('/rest/v1/allowed_sync_users?select=user_id&limit=1',{token:t});
  if(!Array.isArray(rows)||rows.length===0)throw new Error('このアカウントはまだ同期許可リストに登録されていません。管理画面で本人を許可してからお試しください。');
 }
+function semanticKey(row){
+ const id=Number(row.id??row.question_id);
+ const correct=row.ok??row.is_correct;
+ const at=Date.parse(row.at??row.answered_at);
+ if(!Number.isInteger(id)||id<1||id>100||typeof correct!=='boolean'||!Number.isFinite(at))return null;
+ return id+'|'+String(at)+'|'+correct;
+}
 async function eventUUID(row,index){
- const input=String(row.id)+'|'+String(row.at)+'|'+String(!!row.ok);
+ const stamp=new Date(row.at).toISOString();
+ const input=String(row.id)+'|'+stamp+'|'+String(!!row.ok);
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input)));
  const b=digest.slice(0,16);b[6]=(b[6]&15)|80;b[8]=(b[8]&63)|128;
  const hex=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -81,6 +89,7 @@ async function syncHistory(automatic=false){
   phase='クラウド履歴の読み取り';status('同期処理：'+phase);
   const remote=await getAllEvents(t);
   const known=new Set(remote.map(x=>x.event_id));
+  const remoteKeys=new Set(remote.map(semanticKey).filter(Boolean));
   phase='ログインユーザーの確認';status('同期処理：'+phase);
   const user=await call('/auth/v1/user',{token:t});
   if(!user?.id)throw new Error('認証ユーザーを確認できません。');
@@ -89,7 +98,7 @@ async function syncHistory(automatic=false){
   for(let i=0;i<local.length;i++){
    const r=local[i];if(!r||!Number.isFinite(Number(r.id))||typeof r.ok!=='boolean'||!Number.isFinite(Date.parse(r.at)))continue;
    const eid=await eventUUID(r);
-   if(!known.has(eid))outgoing.push({event_id:eid,user_id:user.id,question_id:String(r.id),is_correct:r.ok,answered_at:r.at});
+   if(!known.has(eid)&&!remoteKeys.has(semanticKey(r)))outgoing.push({event_id:eid,user_id:user.id,question_id:String(r.id),is_correct:r.ok,answered_at:r.at});
   }
   if(!automatic&&!window.confirm('端末内の履歴 '+local.length+'件のうち、未登録の約'+outgoing.length+'件をクラウドへ送信します。既存の端末履歴は残し、他の端末で保存済みの記録も取り込みます。実行しますか？')){status('同期をキャンセルしました。');return}
   // iOS Safariでダウンロード直後のPOSTが中断される可能性があるため、
@@ -104,14 +113,16 @@ async function syncHistory(automatic=false){
   phase='保存結果の読み取り';status('同期処理：'+phase);
   const latest=await getAllEvents(t);
   const existing=new Set();
+  const semanticSeen=new Set();
   const merged=[];
   // 同じ解答を識別できる限り保ち、端末内イベントを最優先して保持する
   for(let i=0;i<local.length;i++){
    const r=local[i];if(!r||typeof r.ok!=='boolean'||!Number.isFinite(Date.parse(r.at)))continue;
-   const eid=await eventUUID(r);existing.add(eid);merged.push(r);
+   const eid=await eventUUID(r);existing.add(eid);semanticSeen.add(semanticKey(r));merged.push(r);
   }
   for(const r of latest){
-   if(existing.has(r.event_id))continue;
+   if(existing.has(r.event_id)||semanticSeen.has(semanticKey(r)))continue;
+   semanticSeen.add(semanticKey(r));
    // 別端末の履歴。追加のみで端末側の既存履歴を上書きしない。
    merged.push({id:Number(r.question_id),ok:r.is_correct,at:r.answered_at});
   }
