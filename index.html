@@ -336,7 +336,7 @@ function scrollToQuestionStart(){
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   const section=$('quiz');
   if(section&&!section.classList.contains('hidden')){
-   section.scrollIntoView({block:'start',inline:'nearest',behavior:'instant'});
+   section.scrollIntoView({block:'start',inline:'nearest',behavior:'auto'});
   }
  }));
 }
