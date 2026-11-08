@@ -8,6 +8,7 @@ const AUTO='gkentei-formal-cloud-auto-opt-in-v1';
 const REMEMBER='gkentei-formal-remember-login-v1';
 const STORED_SESSION='gkentei-formal-persisted-session-v1';
 let refreshing=null;
+let authGeneration=0;
 const AUTO_DEBOUNCE_MS=2000, AUTO_MIN_INTERVAL_MS=30000;
 let syncRunning=false,autoTimer=null,lastAutoAttempt=0,rerunAfterSync=false;
 const $c=id=>document.getElementById(id);
@@ -25,11 +26,12 @@ async function call(path,{method='GET',body,token,extra={}}={}){
 }
 function remembering(){try{return localStorage.getItem(REMEMBER)==='yes'}catch{return false}}
 function saveSession(s){
+ if(!s)authGeneration++;
  session=s;
  try{
   if(s){
    sessionStorage.setItem(SESSION,JSON.stringify(s));
-   if(remembering())localStorage.setItem(STORED_SESSION,JSON.stringify(s));
+   if(remembering()&&!recoveryMode)localStorage.setItem(STORED_SESSION,JSON.stringify(s));
    else localStorage.removeItem(STORED_SESSION);
   }else{
    sessionStorage.removeItem(SESSION);localStorage.removeItem(STORED_SESSION);
@@ -63,6 +65,7 @@ async function token(){
  if(refreshing)return refreshing;
  if(!session.refresh_token)throw new Error('ログイン期限が切れました。再ログインしてください。');
  const originalRefresh=session.refresh_token;
+ const expectedGeneration=authGeneration;
  refreshing=(async()=>{
   try{
    if(remembering()){
@@ -76,10 +79,11 @@ async function token(){
    }
    const next=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
    if(!next?.access_token||!next?.refresh_token)throw new Error('認証の更新に失敗しました。');
+   if(authGeneration!==expectedGeneration)throw new Error('ログアウト済みのため認証更新を中止しました。');
    saveSession({...next,expires_at:Math.floor(Date.now()/1000)+Number(next.expires_in||3600)});
    return session.access_token;
   }catch(e){
-   if(/invalid|revoked|expired|refresh_token_not_found/i.test(e.message||'')){
+   if(authGeneration===expectedGeneration&&/invalid|revoked|expired|refresh_token_not_found/i.test(e.message||'')){
     saveSession(null);
     status('ログインの有効期限が終了しました。もう一度ログインしてください。',true);
    }
@@ -360,7 +364,7 @@ function init(){
  setInterval(()=>scheduleAuto('他端末の確認',1000),120000);
  window.addEventListener('storage',e=>{
   if(e.key===STORED_SESSION&&remembering()){
-   if(!e.newValue){stopAuto();session=null;render()}
+   if(!e.newValue){stopAuto();session=null;authGeneration++;render()}
    else{try{const updated=JSON.parse(e.newValue);if(updated?.access_token&&updated?.refresh_token){session=updated;render()}}catch{}}
   }
  });
