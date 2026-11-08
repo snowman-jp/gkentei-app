@@ -81,7 +81,11 @@ body.quiz-active main{padding-top:28px}
 <button id="cloudSyncButton" class="primary" type="button" disabled>確認して手動で同期する</button>
 <p id="cloudStatus" class="muted" role="status" aria-live="polite">同期はオフです。通常の学習履歴は端末内にのみ保存されます。</p>
 <p class="muted">同期するのは問題ID・正誤・解答日時と、完了セットの記録だけです。同期をオフにしても、クラウド上の保存済みデータは自動削除されません。</p>
-</details></div></section><section id="quiz" class="hidden"><div class="card"><div class="quiznav"><button id="quizHome" class="quizback" aria-label="学習を終了してダッシュボードへ戻る">‹</button><div class="progress" id="progress" role="progressbar" aria-label="問題の進み具合"></div><span id="number"></span></div><div class="quizhead"><span id="mode"></span></div><div class="tag" id="category"></div><h2 id="question"></h2><p id="coachQuestionReason" class="coach-question-reason hidden"></p><div class="choices" id="choices"></div><div id="feedback" class="explain hidden" role="status" aria-live="polite" aria-atomic="true"></div><button id="next" class="primary hidden">次の問題へ</button></div></section><section id="results" class="hidden"><div class="card"><h2 id="resultTitle">結果</h2><div id="resultScore" style="font-size:32px;font-weight:800;margin:14px 0"></div><p id="resultNote" class="muted"></p><div id="resultItems"></div><button class="primary" id="returnHome">ダッシュボードへ戻る</button><button class="secondary" id="retryWrong">今回間違えた問題を復習</button></div></section><section id="stats" class="hidden"><div class="card"><h2>分野別の学習状況</h2><div id="statsContent"></div><button class="primary" id="statsHome">戻る</button><button class="secondary" id="exportHistory">学習履歴をバックアップ</button><p class="muted">端末のファイルへ保存します。読み込み機能はありません。</p><button class="secondary" id="reset">この端末の学習履歴を消去</button></div></section><footer>学習履歴は通常このブラウザ内に保存されます。Safariの閲覧データ削除や端末変更で消えることがあります。本人が任意のクラウド同期を実行した場合に限り、同期済みの解答履歴はクラウドにも保存されます。公式問題・本試験の得点を保証するものではありません。個人情報や業務資料を入力しないでください。<div>参考：<a href="https://www.jdla.org/certificate/general/" target="_blank" rel="noopener">JDLA G検定公式サイト</a></div></footer></main><script src="coach.js"></script><script>
+</details></div></section><section id="quiz" class="hidden"><div class="card"><div class="quiznav"><button id="quizHome" class="quizback" aria-label="学習を終了してダッシュボードへ戻る">‹</button><div class="progress" id="progress" role="progressbar" aria-label="問題の進み具合"></div><span id="number"></span></div><div class="quizhead"><span id="mode"></span></div><div class="tag" id="category"></div><h2 id="question"></h2><p id="coachQuestionReason" class="coach-question-reason hidden"></p><div class="choices" id="choices"></div><div id="feedback" class="explain hidden" role="status" aria-live="polite" aria-atomic="true"></div><button id="next" class="primary hidden">次の問題へ</button></div></section><section id="results" class="hidden"><div class="card"><h2 id="resultTitle">結果</h2><div id="resultScore" style="font-size:32px;font-weight:800;margin:14px 0"></div><p id="resultNote" class="muted"></p><div id="resultItems"></div><button class="primary" id="returnHome">ダッシュボードへ戻る</button><button class="secondary" id="retryWrong">今回間違えた問題を復習</button></div></section><section id="stats" class="hidden"><div class="card"><h2>分野別の学習状況</h2><div id="statsContent"></div><button class="primary" id="statsHome">戻る</button><button class="secondary" id="exportHistory">学習履歴をバックアップ</button><p class="muted">端末のファイルへ保存します。読み込み機能はありません。</p><button class="secondary" id="reset">この端末の学習履歴を消去</button></div></section><footer>学習履歴は通常このブラウザ内に保存されます。Safariの閲覧データ削除や端末変更で消えることがあります。本人が任意のクラウド同期を実行した場合に限り、同期済みの解答履歴はクラウドにも保存されます。公式問題・本試験の得点を保証するものではありません。個人情報や業務資料を入力しないでください。<div>参考：<a href="https://www.jdla.org/certificate/general/" target="_blank" rel="noopener">JDLA G検定公式サイト</a></div></footer></main><script src="coach.js"></script><script src="questions-extra-1.js"></script>
+<script src="questions-extra-2.js"></script>
+<script src="questions-extra-3.js"></script>
+<script src="questions-extra-4.js"></script>
+<script>
 const QUESTIONS=[
 {"id":1,"cat":"AI基礎・歴史","q":"チューリングテストについて最も適切な説明はどれか。","o":["機械が意識を有することを科学的に証明する実験","対話による人間と機械の識別可能性を判定する考え方","機械の論理推論速度を定量評価する標準ベンチマーク","ニューラルネットワークの汎化誤差を推定する手法"],"a":1,"e":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","lesson":{"intuition":"人と話して区別できるかを通じて、機械の知的な振る舞いを考えるテストです。","conclusion":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","basics":"チューリングテスト（Turing test）は対話に基づく判定の考え方です。知的に見える振る舞いと、内面に意識があることは別問題です。","example":"文字だけで相手と会話し、人か機械かを判定する場面を想像してください。自然な返答でも、意識がある証拠にはなりません。","wrong":["意識の存在を科学的に証明する設計ではありません。",null,"論理演算の速さを測る性能試験ではありません。","未知のデータへの誤差である汎化誤差を測る手法ではありません。"],"point":"振る舞いの判定と、意識や知能全体の証明を区別します。中国語の部屋や強いAI・弱いAIとの比較も重要です。"},"syllabus":{"version":"1.4","domain":"技術","item":2}},
 {"id":2,"cat":"AI基礎・歴史","q":"フレーム問題の本質的な難しさに最も近いものはどれか。","o":["行為の影響を受けない事実を含め何を考慮すべきか特定する難しさ","前向き推論と後ろ向き推論を切り替える難しさ","知識を一階述語論理へ必ず変換する難しさ","教師データのクラス不均衡を補正する難しさ"],"a":0,"e":"フレーム問題は、行為後に変わること・変わらないことなど、膨大な事柄の関連性を扱う問題。ほかは個別の推論方式や機械学習課題。","lesson":{"intuition":"何かをするとき、関係することだけをどう選ぶかという難しさです。","conclusion":"フレーム問題は、行為後に変わること・変わらないことなど、膨大な事柄の関連性を扱う問題。ほかは個別の推論方式や機械学習課題。","basics":"フレーム問題（frame problem）は、行為で変わる事実・変わらない事実をどう表し、推論すべき範囲をどう絞るかに関わります。単なる計算速度の問題には限りません。","example":"ロボットがコップを動かしても、部屋の壁の色まで変わるわけではありません。何が影響を受けないかまで毎回列挙するのは困難です。","wrong":[null,"前向き・後ろ向き推論は推論方向の違いで、関連する事実を選ぶ問題そのものではありません。","一階述語論理への変換だけに限定される問題ではありません。","クラス不均衡は機械学習のデータ比率の課題です。"],"point":"フレーム問題は関連性や変化の表現、記号接地問題は記号と意味の結び付きです。二つを混同しないようにします。"},"syllabus":{"version":"1.4","domain":"技術","item":2}},
@@ -183,7 +187,52 @@ const QUESTIONS=[
 {"id":98,"cat":"AI応用・評価","q":"検索用埋め込みの類似度計算でよく使われる指標はどれか。","o":["適合率@kだけ","シャノンエントロピーだけ","交差検証誤差だけ","コサイン類似度"],"a":3,"e":"コサイン類似度はベクトル間の角度に基づく類似性を表す。検索精度の評価指標とは異なる。","lesson":{"intuition":"二つの数の矢印が、どれくらい同じ向きを向くかを測ります。","conclusion":"コサイン類似度はベクトル間の角度に基づく類似性を表す。検索精度の評価指標とは異なる。","basics":"コサイン類似度（cosine similarity）は、内積を二つのベクトルの長さの積で割った値です。長さが0のベクトルでは定義できません。","example":"正の倍率で同じ向きのベクトルなら1、直交なら0、逆向きなら−1です。大きさより方向を比べたい検索などで使います。","wrong":["適合率@kは上位k件の検索結果の評価で、二つのベクトルの類似度そのものではありません。","エントロピーは分布の不確かさを測る量です。","交差検証誤差はモデル評価の結果で、ペアの方向の近さではありません。",null],"point":"コサイン類似度とユークリッド距離、検索の評価指標を区別します。ベクトルを単位長にそろえると内積と一致します。"},"syllabus":{"version":"1.4","domain":"技術","item":37}},
 {"id":99,"cat":"AI応用・評価","q":"モデルのキャリブレーションが良い状態の説明として適切なのはどれか。","o":["予測確率がすべて0または1になる","正答率が必ず100％になる","予測確率0.7の事例群で、実際の陽性割合がおよそ0.7になる","特徴量の重要度がすべて等しくなる"],"a":2,"e":"確率の校正は、予測した確率と実測頻度の一致度を評価する。識別能力とは別の観点。","lesson":{"intuition":"陽性の確率70％と予測した集団で、実際の陽性も約70％になることです。","conclusion":"確率の校正は、予測した確率と実測頻度の一致度を評価する。識別能力とは別の観点。","basics":"calibrationは確率の校正です。予測確率と実際の陽性頻度の一致を評価します。順位付けが上手でも、確率が過大・過小な場合があります。","example":"病気の確率を0.7と予測した人が多数いて、その約70％が実際に陽性なら、その範囲では校正がよいといえます。","wrong":["0か1の断定的な予測ほど校正がよいとは限りません。","よい校正は正解率100％を意味せず、確率と頻度の一致です。",null,"特徴量の重要度の均等さは、確率の校正の定義ではありません。"],"point":"識別能力・正解率・校正を区別します。十分な件数で確率帯ごとの頻度を見る必要があり、一つの事例だけでは判断できません。"},"syllabus":{"version":"1.4","domain":"技術","item":10}},
 {"id":100,"cat":"AI応用・評価","q":"分布外データ（OOD）への対応として適切なのはどれか。","o":["モデルが一度高精度ならすべてのOODでも同じ性能になる","訓練時に想定しなかった入力を検出し、人の確認や安全な代替処理を検討する","OODは常に入力ミスと同義である","OODを検出すれば再評価や改善は不要になる"],"a":1,"e":"分布外入力は予測の信頼性が低い場合がある。検知・保留・監督等の設計が必要。","lesson":{"intuition":"習っていない種類の入力には、自信だけで進めず別の対応を用意します。","conclusion":"分布外入力は予測の信頼性が低い場合がある。検知・保留・監督等の設計が必要。","basics":"OODはOut-of-Distribution、分布外です。訓練時に想定した分布と異なる入力では、予測の信頼性が下がり得ます。検知・保留・人への引き継ぎを検討します。","example":"昼の道路画像で学んだモデルへ雪の夜の画像を渡す例です。高い確率を出しても、未知の条件で正しい保証にはなりません。","wrong":["訓練分布での高精度は、未知の条件への同じ性能を保証しません。",null,"正常に取得した画像でも、訓練で想定しない条件ならOODになり得ます。","検知は対応の出発点であり、再評価や改善を不要にはしません。"],"point":"OOD・データドリフト・入力の破損を区別します。検知自体にも見逃しや誤警報があり、安全な代替処理と評価が必要です。"},"syllabus":{"version":"1.4","domain":"技術","item":35}}
-];const KEY='gkentei-trainer-v3-exam-original';const QUESTION_IDS=QUESTIONS.map(q=>q.id);
+];
+// IDs 1-100 are immutable so existing history and Supabase records continue to work.
+{
+ const raw=window.GK_EXTRA_RAW||[];
+ if(raw.length!==200)throw new Error('追加問題が200問ではありません。');
+ const categories=new Map();
+ for(const r of raw){
+  if(!categories.has(r[0]))categories.set(r[0],[]);
+  categories.get(r[0]).push(r);
+ }
+ const makeQuestion=(r,idx)=>{
+  const id=101+idx,cat=r[0],full=r.length===8;
+  const correct=full?r[2]:r[2],example=full?r[7]:r[3];
+  let alternatives;
+  if(full){
+   alternatives=r.slice(3,6).map((answer,n)=>({answer,explain:'「'+answer+'」は正解の「'+correct+'」とは異なります。'+r[6]}));
+  }else{
+   const peers=categories.get(cat).filter(x=>x!==r);
+   const take=[peers[(idx*7)%peers.length],peers[(idx*7+1)%peers.length],peers[(idx*7+2)%peers.length]];
+   alternatives=take.map(peer=>({answer:peer[2],explain:'これは「'+peer[1]+'」についての説明です。「'+r[1]+'」は、'+correct+'という意味です。'}));
+  }
+  const all=[{answer:correct,explain:null},...alternatives];
+  const offset=id%4;
+  const rotated=[...all.slice(offset),...all.slice(0,offset)];
+  const answer=rotated.findIndex(x=>x.explain===null);
+  const term=full?r[1].replace(/について.*$/,''):r[1];
+  const conclusion=full?r[6]:'「'+r[1]+'」とは、'+correct+'ということです。';
+  const basics=full?r[6]:r[1]+'は'+correct+'。似た言葉との違いを押さえ、適用する場面も確認しましょう。';
+  return {
+   id,cat,q:full?r[1]:'「'+r[1]+'」について最も適切な説明はどれか。',
+   o:rotated.map(x=>x.answer),a:answer,e:conclusion,
+   lesson:{
+    intuition:full?r[6]:'ひとことでいうと、'+correct+'。',
+    conclusion,
+    basics,
+    example:example,
+    wrong:rotated.map(x=>x.explain),
+    point:full?r[6]:'「'+r[1]+'」の定義と「'+example+'」という具体例を結びつけて覚えます。'
+   },
+   syllabus:{version:'1.4',domain:cat==='法律・倫理'||cat==='AI倫理・ガバナンス'?'法律・倫理':'技術',item:null}
+  };
+ };
+ raw.forEach((r,i)=>QUESTIONS.push(makeQuestion(r,i)));
+ if(QUESTIONS.length!==300||new Set(QUESTIONS.map(q=>q.id)).size!==300)throw new Error('問題数またはIDの不整合');
+}
+const KEY='gkentei-trainer-v3-exam-original';const QUESTION_IDS=QUESTIONS.map(q=>q.id);
 let originalRaw=null,storageReadFailed=false;try{originalRaw=localStorage.getItem(KEY)}catch(_){storageReadFailed=true}
 let loaded=ReviewCoach.parse(originalRaw,QUESTION_IDS),data=loaded.data;
 let lastStoredRaw=originalRaw;
@@ -246,7 +295,7 @@ for(const [label,key] of [['② 結論','conclusion'],['③ 基礎知識','basic
 const section=document.createElement('details');section.className='lesson-section';const summary=document.createElement('summary');summary.textContent=label;section.append(summary);
 if(key==='wrong'){const list=document.createElement('ul');displayedChoices.forEach(({text,originalIndex},displayIndex)=>{if(originalIndex===q.a)return;const li=document.createElement('li');const strong=document.createElement('strong');strong.textContent='選択肢'+'ABCD'[displayIndex]+'：'+text;const reason=document.createElement('p');reason.textContent=q.lesson.wrong[originalIndex];li.append(strong,reason);list.append(li)});section.append(list)}else{const body=document.createElement('p');body.textContent=q.lesson[key];section.append(body)}
 if(key==='point'){
-const meta=document.createElement('p');meta.className='lesson-meta';meta.textContent='公式シラバス第'+q.syllabus.version+'版：'+q.syllabus.domain+'分野・項目'+q.syllabus.item+'（主題の対応）';section.append(meta);
+const meta=document.createElement('p');meta.className='lesson-meta';meta.textContent='公式シラバス第'+q.syllabus.version+'版：'+q.syllabus.domain+'分野'+(q.syllabus.item===null?'（追加問題。細目番号は未割当）':'・項目'+q.syllabus.item+'（主題の対応）');section.append(meta);
 if(q.legal){const info=document.createElement('div');info.className='legal-note';for(const [name,value] of [['適用条件',q.legal.conditions],['例外・留意点',q.legal.exceptions],['根拠法令',q.legal.basis],['確認状況',q.legal.reviewedOn+'：'+q.legal.verification]]){const p=document.createElement('p');const label=document.createElement('strong');label.textContent=name+'：';p.append(label,document.createTextNode(value));info.append(p)}const link=document.createElement('a');link.href=q.legal.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='e-Govの根拠法令を開く';info.append(link);section.append(info)}
 }root.append(section)
 }}
