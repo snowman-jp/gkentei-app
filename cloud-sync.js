@@ -5,6 +5,9 @@ const PUBLIC_KEY='sb_publishable_a2M9GVPbhf7xaTOnI3hH8Q_kXOKzIzy';
 const OPT_IN='gkentei-formal-cloud-opt-in-v1';
 const SESSION='gkentei-formal-cloud-session-v1';
 const AUTO='gkentei-formal-cloud-auto-opt-in-v1';
+const REMEMBER='gkentei-formal-remember-login-v1';
+const STORED_SESSION='gkentei-formal-persisted-session-v1';
+let refreshing=null;
 const AUTO_DEBOUNCE_MS=2000, AUTO_MIN_INTERVAL_MS=30000;
 let syncRunning=false,autoTimer=null,lastAutoAttempt=0,rerunAfterSync=false;
 const $c=id=>document.getElementById(id);
@@ -20,26 +23,70 @@ async function call(path,{method='GET',body,token,extra={}}={}){
  if(!response.ok){let message;try{const e=await response.json();message=e.msg||e.message||e.error_description||e.error}catch{}throw new Error(message||'HTTP '+response.status)}
  if(response.status===204)return null;const text=await response.text();return text?JSON.parse(text):null;
 }
-function saveSession(s){session=s; if(s)sessionStorage.setItem(SESSION,JSON.stringify(s));else sessionStorage.removeItem(SESSION);render();}
+function remembering(){try{return localStorage.getItem(REMEMBER)==='yes'}catch{return false}}
+function saveSession(s){
+ session=s;
+ try{
+  if(s){
+   sessionStorage.setItem(SESSION,JSON.stringify(s));
+   if(remembering())localStorage.setItem(STORED_SESSION,JSON.stringify(s));
+   else localStorage.removeItem(STORED_SESSION);
+  }else{
+   sessionStorage.removeItem(SESSION);localStorage.removeItem(STORED_SESSION);
+  }
+ }catch{status('ブラウザがログイン情報を保存できません。次回は再ログインが必要になる場合があります。',true)}
+ render();
+}
+function restoreSession(){
+ let temporary=null,persistent=null;
+ try{temporary=JSON.parse(sessionStorage.getItem(SESSION)||'null')}catch{}
+ try{if(remembering())persistent=JSON.parse(localStorage.getItem(STORED_SESSION)||'null');else localStorage.removeItem(STORED_SESSION)}catch{}
+ const valid=s=>s&&typeof s.access_token==='string'&&typeof s.refresh_token==='string'&&Number.isFinite(Number(s.expires_at));
+ return valid(persistent)?persistent:valid(temporary)?temporary:null;
+}
 function render(){
  const active=consent(),signed=!!session?.access_token;
  $c('cloudConsent').checked=active;
  $c('cloudAuto').checked=autoEnabled();
+ $c('cloudRemember').checked=remembering();
  $c('cloudAuto').disabled=!active||recoveryMode;
  $c('cloudLogin').hidden=signed||recoveryMode;
  $c('cloudRecovery').hidden=!recoveryMode;
  $c('cloudLoggedIn').hidden=!signed||recoveryMode;
 
  $c('cloudSyncButton').disabled=!active||!signed||recoveryMode;
- $c('cloudEmailLabel').textContent=signed?'認証済み（このブラウザ内のセッション）':'';
+ $c('cloudEmailLabel').textContent=signed?(remembering()?'認証済み（この端末ではログイン状態を保持）':'認証済み（このタブ内のセッション）'):'';
 }
 async function token(){
  if(!session?.access_token)throw new Error('先にメールでログインしてください。');
- if(session.expires_at && Date.now()/1000<session.expires_at-60)return session.access_token;
- if(!session.refresh_token)throw new Error('ログインの有効期限が切れました。再ログインしてください。');
- const s=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
- saveSession({...s,expires_at:Math.floor(Date.now()/1000)+(s.expires_in||3600)});
- return session.access_token;
+ if(session.expires_at&&Date.now()/1000<Number(session.expires_at)-60)return session.access_token;
+ if(refreshing)return refreshing;
+ if(!session.refresh_token)throw new Error('ログイン期限が切れました。再ログインしてください。');
+ const originalRefresh=session.refresh_token;
+ refreshing=(async()=>{
+  try{
+   if(remembering()){
+    try{
+     const latest=JSON.parse(localStorage.getItem(STORED_SESSION)||'null');
+     if(latest?.refresh_token&&latest.refresh_token!==originalRefresh){
+      session=latest;
+      if(Date.now()/1000<Number(latest.expires_at)-60)return latest.access_token;
+     }
+    }catch{}
+   }
+   const next=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
+   if(!next?.access_token||!next?.refresh_token)throw new Error('認証の更新に失敗しました。');
+   saveSession({...next,expires_at:Math.floor(Date.now()/1000)+Number(next.expires_in||3600)});
+   return session.access_token;
+  }catch(e){
+   if(/invalid|revoked|expired|refresh_token_not_found/i.test(e.message||'')){
+    saveSession(null);
+    status('ログインの有効期限が終了しました。もう一度ログインしてください。',true);
+   }
+   throw e;
+  }finally{refreshing=null}
+ })();
+ return refreshing;
 }
 async function approved(t){
  const rows=await call('/rest/v1/allowed_sync_users?select=user_id&limit=1',{token:t});
@@ -227,7 +274,7 @@ function scheduleAuto(reason,delay=AUTO_DEBOUNCE_MS){
 }
 function stopAuto(){if(autoTimer!==null)clearTimeout(autoTimer);autoTimer=null}
 function init(){
- try{session=JSON.parse(sessionStorage.getItem(SESSION)||'null')}catch{session=null}
+ session=restoreSession();
  // メールリンクから戻ってきた時のトークン。許可前にクラウド履歴を自動取得しない。
  const hash=new URLSearchParams(location.hash.replace(/^#/,''));const access=hash.get('access_token'),refresh=hash.get('refresh_token');
  recoveryMode=hash.get('type')==='recovery' && !!access;
@@ -257,6 +304,17 @@ function init(){
    if(!confirm('問題ID・正誤・解答日時を、本人が「同期する」を押した場合だけSupabaseへ保存します。通常利用では送信しません。同意しますか？')){e.target.checked=false;return}
    localStorage.setItem(OPT_IN,'yes');status('クラウド同期の利用を許可しました。自動同期は別途オンにした場合のみ動きます。');
   }else{localStorage.removeItem(OPT_IN);localStorage.removeItem(AUTO);stopAuto();status('クラウド同期をオフにしました。送信済みのデータは自動削除されません。')}
+  render();
+ });
+ $c('cloudRemember').addEventListener('change',e=>{
+  if(e.target.checked){
+   if(!window.confirm('この端末のブラウザにログイン状態を保持します。共有端末では使わず、端末には画面ロックを設定してください。続けますか？')){e.target.checked=false;return}
+   try{localStorage.setItem(REMEMBER,'yes');if(session)saveSession(session);status('ログイン保持を有効にしました。次回の起動時もログインを復元します。');}
+   catch{e.target.checked=false;status('このブラウザではログイン保持を設定できませんでした。',true)}
+  }else{
+   try{localStorage.removeItem(REMEMBER);localStorage.removeItem(STORED_SESSION)}catch{}
+   status('ログイン保持をオフにしました。このタブでは引き続きログインできます。');
+  }
   render();
  });
  $c('cloudAuto').addEventListener('change',e=>{
@@ -300,6 +358,12 @@ function init(){
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleAuto('アプリ復帰',1000);else stopAuto()});
  // 画面を開いたまま他端末から増えた回答も取得する（バックグラウンド同期ではない）。
  setInterval(()=>scheduleAuto('他端末の確認',1000),120000);
+ window.addEventListener('storage',e=>{
+  if(e.key===STORED_SESSION&&remembering()){
+   if(!e.newValue){stopAuto();session=null;render()}
+   else{try{const updated=JSON.parse(e.newValue);if(updated?.access_token&&updated?.refresh_token){session=updated;render()}}catch{}}
+  }
+ });
  render();scheduleAuto('起動',1500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
