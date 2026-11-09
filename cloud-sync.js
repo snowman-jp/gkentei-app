@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const config=window.GKENTEI_STAGING_CONFIG||{};
 const API_URL=config.url, PUBLIC_KEY=config.publishableKey;
-if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(API_URL||'') || !PUBLIC_KEY?.startsWith('sb_publishable_')){
+if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(API_URL||'') || !PUBLIC_KEY?.startsWith('sb_publishable_') || API_URL.includes('kuduxlkmuvongfdqyjoc')){
  const el=document.getElementById('cloudStatus');if(el)el.textContent='検証用クラウド同期は未設定です。正式版データを保護するため停止しています。';
  for(const id of ['cloudPasswordLogin','cloudRequestReset','cloudSyncButton','cloudSetNewPassword']){const b=document.getElementById(id);if(b)b.disabled=true;}
  return;
