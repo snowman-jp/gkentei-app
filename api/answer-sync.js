@@ -1,9 +1,10 @@
 // Same-origin, private opt-in POST bridge (formal app). User JWT is forwarded unchanged;
 // the database's existing RLS remains the final authorisation boundary.
-const SUPABASE='https://kuduxlkmuvongfdqyjoc.supabase.co';
-const PUBLIC_KEY='sb_publishable_a2M9GVPbhf7xaTOnI3hH8Q_kXOKzIzy';
+const SUPABASE=process.env.GKENTEI_STAGING_SUPABASE_URL;
+const PUBLIC_KEY=process.env.GKENTEI_STAGING_PUBLISHABLE_KEY;
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SUPABASE||'')||!PUBLIC_KEY?.startsWith('sb_publishable_'))return res.status(503).json({error:'Staging cloud sync not configured'});
  if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Method not allowed'});}
  const origin=req.headers.origin;
  const host=req.headers.host;
