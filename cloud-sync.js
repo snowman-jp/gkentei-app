@@ -49,9 +49,7 @@ function restoreSession(){
 function render(){
  const active=consent(),signed=!!session?.access_token;
  $c('cloudConsent').checked=active;
- $c('cloudAuto').checked=autoEnabled();
- $c('cloudRemember').checked=remembering();
- $c('cloudAuto').disabled=!active||recoveryMode;
+ $c('cloudConsent').disabled=recoveryMode;
  $c('cloudLogin').hidden=signed||recoveryMode;
  $c('cloudRecovery').hidden=!recoveryMode;
  $c('cloudLoggedIn').hidden=!signed||recoveryMode;
@@ -262,6 +260,11 @@ async function syncHistory(automatic=false){
    if(!persist()){data=previous;throw new Error('履歴保護のため端末への保存を中止しました。元データは保持されています。');}
    if(typeof dashboard==='function'&&!document.body.classList.contains('quiz-active'))dashboard();
   }
+  // First manual sync is the explicit approval to start subsequent automatic syncing.
+  // Never auto-upload merely because the consolidated checkbox was turned on.
+  if(!automatic&&consent()&&!autoEnabled()){
+   localStorage.setItem(AUTO,'yes');
+  }
   status((automatic?'自動同期完了。':'同期完了。')+'解答 '+latest.length+'件・完了セット '+completedSets+'件を共有しました。');
  }catch(e){status((automatic?'自動同期':'同期')+'できませんでした（'+phase+'）：'+e.message+'。端末内の履歴は保持されています。バックアップを削除しないでください。',true)}
  finally{
@@ -305,27 +308,29 @@ function init(){
  });
  $c('cloudConsent').addEventListener('change',e=>{
   if(e.target.checked){
-   if(!confirm('問題ID・正誤・解答日時を、本人が「同期する」を押した場合だけSupabaseへ保存します。通常利用では送信しません。同意しますか？')){e.target.checked=false;return}
-   localStorage.setItem(OPT_IN,'yes');status('クラウド同期の利用を許可しました。自動同期は別途オンにした場合のみ動きます。');
-  }else{localStorage.removeItem(OPT_IN);localStorage.removeItem(AUTO);stopAuto();status('クラウド同期をオフにしました。送信済みのデータは自動削除されません。')}
-  render();
- });
- $c('cloudRemember').addEventListener('change',e=>{
-  if(e.target.checked){
-   if(!window.confirm('この端末のブラウザにログイン状態を保持します。共有端末では使わず、端末には画面ロックを設定してください。続けますか？')){e.target.checked=false;return}
-   try{localStorage.setItem(REMEMBER,'yes');if(session)saveSession(session);status('ログイン保持を有効にしました。次回の起動時もログインを復元します。');}
-   catch{e.target.checked=false;status('このブラウザではログイン保持を設定できませんでした。',true)}
+   if(!window.confirm('この端末でログインを保持し、学習履歴（問題ID・正誤・日時・完了セット）を本人専用のクラウドで共有します。初回の送信は「今すぐ同期する」で確認し、その後は自動で同期します。個人専用端末でのみ使ってください。続けますか？')){
+    e.target.checked=false;render();return;
+   }
+   try{
+    // Reuse the original preference keys and existing session: no history migration or reset.
+    localStorage.setItem(OPT_IN,'yes');
+    localStorage.setItem(REMEMBER,'yes');
+    // The AUTO key stays disabled until the user's first confirmed manual sync.
+    if(session)saveSession(session);
+    status(autoEnabled()?'クラウド同期が有効です。':'クラウド同期を有効にしました。最初に「今すぐ同期する」を押してください。');
+   }catch{
+    localStorage.removeItem(OPT_IN);
+    localStorage.removeItem(AUTO);
+    localStorage.removeItem(REMEMBER);
+    stopAuto();e.target.checked=false;
+    status('このブラウザでは同期設定を保存できませんでした。端末の設定を確認してください。',true);
+   }
   }else{
-   try{localStorage.removeItem(REMEMBER);localStorage.removeItem(STORED_SESSION)}catch{}
-   status('ログイン保持をオフにしました。このタブでは引き続きログインできます。');
+   // Existing cloud records and this device's study history are retained.
+   localStorage.removeItem(OPT_IN);localStorage.removeItem(AUTO);
+   localStorage.removeItem(REMEMBER);localStorage.removeItem(STORED_SESSION);
+   stopAuto();status('クラウド同期をオフにしました。端末内とクラウド上の学習履歴は残っています。');
   }
-  render();
- });
- $c('cloudAuto').addEventListener('change',e=>{
-  if(e.target.checked){
-   if(!consent()||!window.confirm('ログイン中は、回答後やアプリを再び開いたときに、問題ID・正誤・日時を本人専用クラウドへ自動送信・取得します。実行しますか？')){e.target.checked=false;return}
-   localStorage.setItem(AUTO,'yes');status('自動同期をオンにしました。画面を開いているときに同期します。');scheduleAuto('設定変更',1500);
-  }else{localStorage.removeItem(AUTO);stopAuto();status('自動同期をオフにしました。既存のクラウドデータは残ります。')}
   render();
  });
  $c('cloudRequestReset').addEventListener('click',async()=>{
