@@ -21,3 +21,4 @@ jobs:
           node tests/quiz.test.cjs
           node tests/coach.test.cjs
           node tests/onboarding-admin.test.cjs
+          node tests/cloud-settings.test.cjs
