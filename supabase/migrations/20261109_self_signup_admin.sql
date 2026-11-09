@@ -5,10 +5,10 @@ create table if not exists public.app_admins (
 );
 alter table public.app_admins enable row level security;
 revoke all on public.app_admins from anon, authenticated;
--- Administrator is the existing project owner account, not any newly registered user.
-insert into public.app_admins(user_id)
-values ('1e51e804-2bd1-4142-8c62-7e7fe381c10f')
-on conflict (user_id) do nothing;
+-- On the isolated test project, grant admin access to an Auth user created in that
+-- project after email verification. Never copy any production user UUID here.
+-- Example (fill only on isolated test project after checking auth.users):
+-- insert into public.app_admins(user_id) values ('<test-admin-uuid>');
 
 -- A confirmed email/password account can sync without manual administrator approval.
 -- Preserve the existing allow-list and user-specific answer/set RLS policies.
