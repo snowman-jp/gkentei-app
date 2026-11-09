@@ -2,6 +2,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
+const path=require('node:path');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 class Element{
@@ -15,13 +16,14 @@ class Element{
 function app(seedData){
  const elements=new Map();const saved=new Map();if(seedData)saved.set('gkentei-trainer-v3-exam-original',JSON.stringify(seedData));
  let seed=321;const math=Object.create(Math);math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- const context=vm.createContext({ReviewCoach:require('../coach.js'),document:{body:new Element(),getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement:t=>new Element(t),createTextNode:t=>({textContent:t})},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Math:math,Date,Set,JSON,confirm:()=>true});
+ const context=vm.createContext({ReviewCoach:require('../coach.js'),document:{body:new Element(),addEventListener:()=>{},getElementById:id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement:t=>new Element(t),createTextNode:t=>({textContent:t})},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Math:math,Date,Set,JSON,crypto:require('node:crypto').webcrypto,confirm:()=>true,window:{addEventListener:()=>{},dispatchEvent:()=>{},scrollTo:()=>{}},requestAnimationFrame:()=>{},setTimeout:()=>{},CustomEvent:class{constructor(type){this.type=type}}});
+ for(const match of html.matchAll(/<script src="(questions-[^"]+\.js)"/g)){vm.runInContext(fs.readFileSync(path.join(__dirname,'..',match[1]),'utf8'),context);}
  vm.runInContext(script,context);return {run:code=>vm.runInContext(code,context),node:id=>elements.get(id),saved:()=>JSON.parse(saved.get('gkentei-trainer-v3-exam-original'))};
 }
 test('100 stable IDs, four unique choices and one answer; 100 complete six-part lessons',()=>{
- const a=app();assert.equal(a.run('QUESTIONS.length'),100);assert.equal(a.run('new Set(QUESTIONS.map(q=>q.id)).size'),100);
+ const a=app();assert.equal(a.run('QUESTIONS.length'),300);assert.equal(a.run('new Set(QUESTIONS.map(q=>q.id)).size'),300);
  assert.equal(a.run('QUESTIONS.every((q,i)=>q.id===i+1&&q.o.length===4&&new Set(q.o).size===4&&Number.isInteger(q.a)&&q.a>=0&&q.a<4)'),true);
- assert.equal(a.run('QUESTIONS.filter(q=>q.lesson).length'),100);
+ assert.equal(a.run('QUESTIONS.filter(q=>q.lesson).length'),300);
  assert.equal(a.run("QUESTIONS.filter(q=>q.lesson).every(q=>['intuition','conclusion','basics','example','point'].every(k=>q.lesson[k].length>0)&&q.lesson.wrong.length===4&&q.lesson.wrong[q.a]===null&&q.lesson.wrong.filter(Boolean).length===3)"),true);
 });
 test('all questions can score correctly after shuffle; all 24 permutations occur; double answer is ignored',()=>{

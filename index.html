@@ -68,7 +68,7 @@ body.quiz-active main{padding-top:28px}
 <label style="display:flex;gap:12px;align-items:center;font-weight:700;margin:12px 0"><input id="cloudRemember" type="checkbox" style="width:24px;height:24px">この端末でログイン状態を保持する（初期はオフ）</label>
 <p class="muted">個人専用の端末に限りオンにしてください。ログイン状態を端末内に保存し、次回アプリを開いたときに復元します。いつでもログアウトできます。</p>
 <p class="muted">本人が自動同期を許可すると、ログイン中に回答を記録した後やアプリを開き直したとき、iPhone・iPadの履歴を共有します。操作のないバックグラウンドでは同期しません。通信エラー時も端末内の履歴は保持します。</p>
-<div id="cloudLogin">
+<div id="cloudLogin"><p class="muted">はじめての方は <a href="./signup.html" style="color:#2454b7;font-weight:700">無料でアカウント登録</a>できます。メール確認後にログインして同期を有効にしてください。</p>
 <label for="cloudEmail" class="muted">登録済みメールアドレス</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="example@example.com" style="width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #c5d0dd">
 <label for="cloudPassword" class="muted">パスワード</label><input id="cloudPassword" type="password" autocomplete="current-password" style="width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid #c5d0dd">
 <button type="button" id="cloudPasswordLogin" class="secondary">メールとパスワードでログイン</button>
