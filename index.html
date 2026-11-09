@@ -91,6 +91,14 @@ body.quiz-active main{padding-top:28px}
 <script src="questions-exam-2.js"></script>
 <script src="questions-exam-3.js"></script>
 <script src="questions-exam-4.js"></script>
+<script src="questions-deep-1.js"></script>
+<script src="questions-deep-2.js"></script>
+<script src="questions-deep-3.js"></script>
+<script src="questions-deep-4.js"></script>
+<script src="questions-traps-1.js"></script>
+<script src="questions-traps-2.js"></script>
+<script src="questions-traps-3.js"></script>
+<script src="questions-traps-4.js"></script>
 <script>
 const QUESTIONS=[
 {"id":1,"cat":"AI基礎・歴史","q":"チューリングテストについて最も適切な説明はどれか。","o":["機械が意識を有することを科学的に証明する実験","対話による人間と機械の識別可能性を判定する考え方","機械の論理推論速度を定量評価する標準ベンチマーク","ニューラルネットワークの汎化誤差を推定する手法"],"a":1,"e":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","lesson":{"intuition":"人と話して区別できるかを通じて、機械の知的な振る舞いを考えるテストです。","conclusion":"チューリングテストは対話の識別可能性に着目する。意識の存在や総合的知能の証明ではない。","basics":"チューリングテスト（Turing test）は対話に基づく判定の考え方です。知的に見える振る舞いと、内面に意識があることは別問題です。","example":"文字だけで相手と会話し、人か機械かを判定する場面を想像してください。自然な返答でも、意識がある証拠にはなりません。","wrong":["意識の存在を科学的に証明する設計ではありません。",null,"論理演算の速さを測る性能試験ではありません。","未知のデータへの誤差である汎化誤差を測る手法ではありません。"],"point":"振る舞いの判定と、意識や知能全体の証明を区別します。中国語の部屋や強いAI・弱いAIとの比較も重要です。"},"syllabus":{"version":"1.4","domain":"技術","item":2}},
@@ -278,6 +286,46 @@ const QUESTIONS=[
    }
   };
  });
+}
+// 2026-11: expert-grade rewrite of questions 101..300.
+// Preserve existing IDs and cloud history. Only change instructional content and choices.
+{
+ const deep=window.GK_DEEP_QUESTIONS||[],traps=window.GK_DEEP_TRAPS||[];
+ if(deep.length!==200||traps.length!==200)throw new Error('問題改善ファイルが全部読み込まれていません。');
+ const pattern=/^[^\^]+\^[^\^]+$/;
+ const newQuestions=new Set();
+ for(let n=0;n<200;n++){
+  const id=101+n,prior=QUESTIONS[id-1],entry=deep[n],distractors=traps[n];
+  if(!prior||prior.id!==id)throw new Error('問題IDが一致しません: '+id);
+  if(!Array.isArray(entry)||entry.length!==5||entry.some(v=>typeof v!=='string'||!v.trim()))throw new Error('詳しい解説の形式エラー: '+id);
+  if(!Array.isArray(distractors)||distractors.length!==3||distractors.some(v=>typeof v!=='string'||!pattern.test(v)))throw new Error('誤答解説の形式エラー: '+id);
+  const [question,intuition,basics,example,point]=entry;
+  if(newQuestions.has(question))throw new Error('問題文の重複: '+id);
+  newQuestions.add(question);
+  const correct=prior.o[prior.a];
+  const candidates=[{text:correct,reason:null},...distractors.map(x=>{
+   const pos=x.indexOf('^');
+   return {text:x.slice(0,pos),reason:x.slice(pos+1)};
+  })];
+  if(new Set(candidates.map(x=>x.text)).size!==4)throw new Error('選択肢の重複: '+id);
+  const rotation=(id*7+1)%4;
+  const display=[...candidates.slice(rotation),...candidates.slice(0,rotation)];
+  const a=display.findIndex(x=>x.reason===null);
+  QUESTIONS[id-1]={
+   ...prior,
+   q:question,o:display.map(x=>x.text),a,e:basics,
+   contentVersion:'deep-rewrite-2026-11',
+   lesson:{
+    intuition,
+    conclusion:prior.lesson.conclusion,
+    basics,
+    example,
+    wrong:display.map(x=>x.reason),
+    point
+   }
+  };
+ }
+ if(QUESTIONS.length!==300||new Set(QUESTIONS.map(x=>x.id)).size!==300)throw new Error('問題バンクのIDが不正です');
 }
 const KEY='gkentei-trainer-v3-exam-original';const QUESTION_IDS=QUESTIONS.map(q=>q.id);
 let originalRaw=null,storageReadFailed=false;try{originalRaw=localStorage.getItem(KEY)}catch(_){storageReadFailed=true}
