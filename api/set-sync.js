@@ -3,7 +3,7 @@ const SUPABASE=process.env.GKENTEI_STAGING_SUPABASE_URL;
 const PUBLIC_KEY=process.env.GKENTEI_STAGING_PUBLISHABLE_KEY;
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
- if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SUPABASE||'')||!PUBLIC_KEY?.startsWith('sb_publishable_'))return res.status(503).json({error:'Staging cloud sync not configured'});
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SUPABASE||'')||!PUBLIC_KEY?.startsWith('sb_publishable_')||SUPABASE.includes('kuduxlkmuvongfdqyjoc'))return res.status(503).json({error:'Staging cloud sync not configured'});
  if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'Method not allowed'});}
  const origin=req.headers.origin,host=req.headers.host;
  if(origin){try{if(new URL(origin).host!==host)return res.status(403).json({error:'Cross-origin request rejected'});}catch{return res.status(403).json({error:'Invalid origin'});}}
