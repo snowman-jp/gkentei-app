@@ -1,12 +1,17 @@
 /* G検定正式版: 本人が明示的に許可した場合だけ自動同期する。未同意なら通信しない。 */
 (()=>{'use strict';
-const API_URL='https://kuduxlkmuvongfdqyjoc.supabase.co';
-const PUBLIC_KEY='sb_publishable_a2M9GVPbhf7xaTOnI3hH8Q_kXOKzIzy';
-const OPT_IN='gkentei-formal-cloud-opt-in-v1';
-const SESSION='gkentei-formal-cloud-session-v1';
-const AUTO='gkentei-formal-cloud-auto-opt-in-v1';
-const REMEMBER='gkentei-formal-remember-login-v1';
-const STORED_SESSION='gkentei-formal-persisted-session-v1';
+const config=window.GKENTEI_STAGING_CONFIG||{};
+const API_URL=config.url, PUBLIC_KEY=config.publishableKey;
+if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(API_URL||'') || !PUBLIC_KEY?.startsWith('sb_publishable_')){
+ const el=document.getElementById('cloudStatus');if(el)el.textContent='検証用クラウド同期は未設定です。正式版データを保護するため停止しています。';
+ for(const id of ['cloudPasswordLogin','cloudRequestReset','cloudSyncButton','cloudSetNewPassword']){const b=document.getElementById(id);if(b)b.disabled=true;}
+ return;
+}
+const OPT_IN='gkentei-staging-cloud-opt-in-v1';
+const SESSION='gkentei-staging-cloud-session-v1';
+const AUTO='gkentei-staging-cloud-auto-opt-in-v1';
+const REMEMBER='gkentei-staging-remember-login-v1';
+const STORED_SESSION='gkentei-staging-persisted-session-v1';
 let refreshing=null;
 let authGeneration=0;
 const AUTO_DEBOUNCE_MS=2000, AUTO_MIN_INTERVAL_MS=30000;
