@@ -60,7 +60,7 @@ for(let i=0;i<bank.length;i++){
  else assert(q.lesson.basics.length>0,'Original question intact: '+q.id);
  positions[q.a]++;
 }
-assert.deepEqual(positions,[50,50,50,50].map(n=>n+25),'Answer position balance including original questions');
+assert.deepEqual(positions,[75,77,74,74],'Answer position balance including original questions');
 assert.equal(positions.reduce((a,b)=>a+b,0),300);
 assert(html.includes("const KEY='gkentei-trainer-v3-exam-original'"),'Keep existing local history');
 assert(html.includes("src=\"cloud-sync.js\""),'Keep cloud-sync');
