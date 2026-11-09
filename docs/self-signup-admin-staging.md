@@ -33,3 +33,13 @@
 - 検証版のセッション・同意キーを正式版と別名に変更した。
 - 10件のコード静的チェックに合格。これらは実ブラウザの認証/RLS E2E試験を代替しない。
 - Vercelアクセスにはチーム認可が必要。現時点で実デプロイと認証テストは未完了。
+
+## 検証環境構築・DB試験結果（2026-11-09）
+- Supabase 検証専用: `gkentei-self-signup-staging`（project ref `racglzpuhofqwfkpfxpo`）、取得した新規プロジェクト費用見積りは **月額追加 $0**。
+- 既存RLS相当の同期用テーブル、登録時許可トリガー、管理者のみ集計可能なRPCを検証専用DBへ適用。トランザクション内のテストユーザー2人で自動許可・自己レコードのみ読取・管理者集計を確認。
+- 非管理者のRPC呼び出しは `42501 Access denied`、他人としてのINSERTは `42501 row-level security policy` で拒否された。
+- テスト後の検証用DBは登録ユーザー0、許可0、解答0、セット完了0、管理者0（ROLLBACK）。
+- Vercel Preview ブランチ環境変数を検証専用のURL/公開キーに設定。検証用デプロイ `dpl_9qCpjhs2oVgXDmLCqvSNq9PNUWxo` は READY。
+- Supabase Security Advisor は `app_admins` の RLS policy なし（テーブル権限はrevoked）と、認証済みユーザーが管理者用 `SECURITY DEFINER` 関数を呼べることを警告。後者は関数内で `app_admins` による本人チェックをしており、非管理者アクセス拒否を確認済。正式化前に再監査すること。
+- メール確認を経由する本物のAuth signup、ブラウザからのログイン/同期、Vercel POST API、管理者画面表示の実E2Eは未完了。検証用の管理者アカウントは未作成。
+- **重要：ブランチの `staging-config.js` は検証用のため、現状のPRを正式版へそのままマージしてはならない。** 正式版用の独立した設定・移行手順・回帰テストを整備すること。
