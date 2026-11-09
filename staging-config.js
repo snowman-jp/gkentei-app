@@ -1,6 +1,6 @@
-// Safety lock: no Supabase project is used until a dedicated test project is configured.
-// Populate only after cost approval and confirmation that this is NOT the production project.
-window.GKENTEI_STAGING_CONFIG = {
-  url: "",
-  publishableKey: ""
-};
+// This configuration is only for the isolated, free staging Supabase project.
+// Do not copy production URL or credentials here.
+window.GKENTEI_STAGING_CONFIG = Object.freeze({
+  url: "https://racglzpuhofqwfkpfxpo.supabase.co",
+  publishableKey: "sb_publishable_YuniLlYz6nM5g5fDcKxeWQ_MHIm-_nR"
+});
